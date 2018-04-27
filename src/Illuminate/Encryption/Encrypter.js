@@ -90,21 +90,21 @@ class Encrypter {
         // will proceed to calculating a MAC for the encrypted value so that this
         // value can be verified later as not having been changed by the users.
         const cipher = crypto.createCipheriv(this.cipher, this.key, iv);
-        cipher.update(serialize ? Serialize.serialize(value) : value);
-        value = cipher.final().toString("base64");
 
-        if (value === false) {
+        try {
+            value = Buffer.concat([
+                cipher.update(serialize ? Serialize.serialize(value) : value),
+                cipher.final()
+            ]).toString("base64");
+        } catch (e) {
             throw new EncryptError("Could not encrypt the data.");
         }
+
         // Once we get the encrypted value we'll go ahead and base64.encode the input
         // vector and create the MAC for the encrypted value so we can then verify
         // its authenticity. Then, we'll JSON the data into the "payload" array.
         let mac = this.hash(iv = Buffer.from(iv, "binary").toString("base64"), value);
-        let json = JSON.stringify({iv, value, mac});
-        /*if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new EncryptError("Could not encrypt the data.");
-        }*/
-        return Buffer.from(json, "utf8").toString("base64");
+        return Buffer.from(JSON.stringify({iv, value, mac}), "utf8").toString("base64");
     }
 
     /**
@@ -130,14 +130,23 @@ class Encrypter {
         // we will then unserialize it and return it out to the caller. If we are
         // unable to decrypt this value we will throw out an exception message.
         const decipher = crypto.createDecipheriv(this.cipher, this.key, iv);
-        let decrypted = Buffer.concat([
-            decipher.update(Buffer.from(jsonPayload.value, "base64")),
-            decipher.final()
-        ]).toString("utf8");
-        if (decrypted === false) {
+        //decipher.setAutoPadding(false);
+        let decryptedPayload;
+
+        try {
+            decryptedPayload = Buffer.concat([
+                decipher.update(Buffer.from(jsonPayload.value, "base64")),
+                decipher.final()
+            ]).toString("utf8");
+        } catch (e) {
             throw new DecryptError("Could not decrypt the data.");
         }
-        return unserialize ? Serialize.unserialize(decrypted) : decrypted;
+
+        try {
+            return unserialize ? Serialize.unserialize(decryptedPayload) : decryptedPayload;
+        } catch (e) {
+            throw new DecryptError("Could not unserialize the data.");
+        }
     }
 
     /**
