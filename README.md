@@ -4,12 +4,17 @@ The Laravel Encryption is node library that helps you to encode/decode data in c
 
 Basic usage:
 ```js
-const Encrypter = require("laravel-encryption").Encrypter;
+const encryption = require('laravel-encryption');
 
-let encrypter = new Encrypter("your-secret-key-");
+let encrypter = new encryption.Encrypter("your-secret-key-");
+
+// or
+let encrypter = new encryption.fromRawKey("base64:eW91ci1zZWNyZXQta2V5LQ==");
+
+// or
+let encrypter = new encryption.fromEnv();
 
 let encrypted = encrypter.encrypt({"key": "value"});
-
 let decrypted = encrypter.decrypt(encrypted);
 
 ```

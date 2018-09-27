@@ -2,7 +2,7 @@
     "name": "ilnicki/laravel-encryption-test",
     "description": "Laravel Encription testing package for comparing php vs js results.",
     "require": {
-        "illuminate/encryption": "^5.6"
+        "illuminate/encryption": "5.7.*"
     },
     "license": "MIT",
     "authors": [
