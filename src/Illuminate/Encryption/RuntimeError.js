@@ -1,7 +1,7 @@
 class RuntimeError extends Error {
     constructor(...args) {
         super(...args);
-        Error.captureStackTrace(this, RuntimeError)
+        Error.captureStackTrace(this, RuntimeError);
     }
 }
 

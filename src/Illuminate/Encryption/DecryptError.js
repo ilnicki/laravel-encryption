@@ -1,7 +1,7 @@
 class DecryptError extends Error {
     constructor(...args) {
         super(...args);
-        Error.captureStackTrace(this, DecryptError)
+        Error.captureStackTrace(this, DecryptError);
     }
 }
 

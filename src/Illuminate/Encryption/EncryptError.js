@@ -1,7 +1,7 @@
 class EncryptError extends Error {
     constructor(...args) {
         super(...args);
-        Error.captureStackTrace(this, EncryptError)
+        Error.captureStackTrace(this, EncryptError);
     }
 }
 

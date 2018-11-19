@@ -1,9 +1,9 @@
-const crypto = require("crypto");
+const crypto = require('crypto');
 const Serialize = require('php-serialize');
 
-const RuntimeError = require("./RuntimeError");
-const EncryptError = require("./EncryptError");
-const DecryptError = require("./DecryptError");
+const RuntimeError = require('./RuntimeError');
+const EncryptError = require('./EncryptError');
+const DecryptError = require('./DecryptError');
 
 /**
  * Illuminate\Encryption\Encrypter
@@ -18,7 +18,7 @@ class Encrypter {
      * @param {string|Buffer} key - The encryption key.
      * @param {string} cipher - The encryption algorithm name.
      */
-    constructor(key, cipher = "AES-128-CBC") {
+    constructor(key, cipher = 'AES-128-CBC') {
         key = Buffer.from(key);
 
         if (Encrypter.supported(key, cipher)) {
@@ -47,7 +47,7 @@ class Encrypter {
      */
     static getCipher(cipher) {
         const ciphers = {
-            "AES-128-CBC": {
+            'AES-128-CBC': {
                 key: {
                     length: 16
                 },
@@ -55,7 +55,7 @@ class Encrypter {
                     length: 16
                 }
             },
-            "AES-256-CBC": {
+            'AES-256-CBC': {
                 key: {
                     length: 32
                 },
@@ -95,16 +95,16 @@ class Encrypter {
             value = Buffer.concat([
                 cipher.update(serialize ? Serialize.serialize(value) : value),
                 cipher.final()
-            ]).toString("base64");
+            ]).toString('base64');
         } catch (e) {
-            throw new EncryptError("Could not encrypt the data.");
+            throw new EncryptError('Could not encrypt the data.');
         }
 
         // Once we get the encrypted value we'll go ahead and base64.encode the input
         // vector and create the MAC for the encrypted value so we can then verify
         // its authenticity. Then, we'll JSON the data into the "payload" array.
-        let mac = this.hash(iv = Buffer.from(iv, "binary").toString("base64"), value);
-        return Buffer.from(JSON.stringify({iv, value, mac}), "utf8").toString("base64");
+        let mac = this.hash(iv = Buffer.from(iv, 'binary').toString('base64'), value);
+        return Buffer.from(JSON.stringify({iv, value, mac}), 'utf8').toString('base64');
     }
 
     /**
@@ -125,7 +125,7 @@ class Encrypter {
      */
     decrypt(payload, unserialize = true) {
         const jsonPayload = this.getJsonPayload(payload);
-        const iv = Buffer.from(jsonPayload.iv, "base64");
+        const iv = Buffer.from(jsonPayload.iv, 'base64');
         // Here we will decrypt the value. If we are able to successfully decrypt it
         // we will then unserialize it and return it out to the caller. If we are
         // unable to decrypt this value we will throw out an exception message.
@@ -135,17 +135,17 @@ class Encrypter {
 
         try {
             decryptedPayload = Buffer.concat([
-                decipher.update(Buffer.from(jsonPayload.value, "base64")),
+                decipher.update(Buffer.from(jsonPayload.value, 'base64')),
                 decipher.final()
-            ]).toString("utf8");
+            ]).toString('utf8');
         } catch (e) {
-            throw new DecryptError("Could not decrypt the data.");
+            throw new DecryptError('Could not decrypt the data.');
         }
 
         try {
             return unserialize ? Serialize.unserialize(decryptedPayload) : decryptedPayload;
         } catch (e) {
-            throw new DecryptError("Could not unserialize the data.");
+            throw new DecryptError('Could not unserialize the data.');
         }
     }
 
@@ -167,8 +167,8 @@ class Encrypter {
      */
     hash(iv, value) {
         let hmac = crypto.createHmac('sha256', this.key);
-        hmac.update(iv.concat(value), "utf8");
-        return hmac.digest().toString("hex");
+        hmac.update(iv.concat(value), 'utf8');
+        return hmac.digest().toString('hex');
     }
 
     /**
@@ -180,20 +180,20 @@ class Encrypter {
      */
     getJsonPayload(payload) {
         try {
-            payload = JSON.parse(Buffer.from(payload, 'base64').toString("utf8"));
+            payload = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
         } catch (e) {
-            throw new DecryptError("The JSON is invalid.");
+            throw new DecryptError('The JSON is invalid.');
         }
 
         // If the payload is not valid JSON or does not have the proper keys set we will
         // assume it is invalid and bail out of the routine since we will not be able
         // to decrypt the given value. We'll also check the MAC for this encryption.
         if (!this.validPayload(payload)) {
-            throw new DecryptError("The payload is invalid.");
+            throw new DecryptError('The payload is invalid.');
         }
 
         if (!this.validMac(payload)) {
-            throw new DecryptError("The MAC is invalid.");
+            throw new DecryptError('The MAC is invalid.');
         }
 
         return payload;
@@ -207,13 +207,13 @@ class Encrypter {
      */
     validPayload(payload) {
         let iv;
-        return typeof payload === "object"
-            && payload.hasOwnProperty("iv")
-            && payload.hasOwnProperty("value")
-            && payload.hasOwnProperty("mac")
-            && (iv = Buffer.from(payload.iv, "base64"))
+        return typeof payload === 'object'
+            && payload.hasOwnProperty('iv')
+            && payload.hasOwnProperty('value')
+            && payload.hasOwnProperty('mac')
+            && (iv = Buffer.from(payload.iv, 'base64'))
             && iv.length === Encrypter.getCipher(this.cipher).iv.length
-            && payload.iv === iv.toString("base64");
+            && payload.iv === iv.toString('base64');
     }
 
     /**
