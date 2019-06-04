@@ -57,7 +57,5 @@ typings/
 # dotenv environment variables file
 .env
 
-package-lock.json
-
 #Idea project config directory
 .idea
