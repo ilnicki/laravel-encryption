@@ -19,12 +19,10 @@ class Encrypter {
      * @param {string} cipher - The encryption algorithm name.
      */
     constructor(key, cipher = 'AES-128-CBC') {
-        key = Buffer.from(key);
+        this.key = Buffer.from(key);
+        this.cipher = cipher;
 
-        if (Encrypter.supported(key, cipher)) {
-            this.key = key;
-            this.cipher = cipher;
-        } else {
+        if (!Encrypter.supported(key, cipher)) {
             throw new RuntimeError(`The only supported ciphers are [${Object.keys(Encrypter.getCipher()).join(', ')}] with the correct key lengths.`);
         }
     }
@@ -85,11 +83,11 @@ class Encrypter {
      * @throws \Illuminate\Contracts\Encryption\EncryptException
      */
     encrypt(value, serialize = true) {
-        let iv = crypto.randomBytes(Encrypter.getCipher(this.cipher).iv.length);
+        const rawIv = crypto.randomBytes(Encrypter.getCipher(this.cipher).iv.length);
         // First we will encrypt the value using OpenSSL. After this is encrypted we
         // will proceed to calculating a MAC for the encrypted value so that this
         // value can be verified later as not having been changed by the users.
-        const cipher = crypto.createCipheriv(this.cipher, this.key, iv);
+        const cipher = crypto.createCipheriv(this.cipher, this.key, rawIv);
 
         try {
             value = Buffer.concat([
@@ -103,8 +101,14 @@ class Encrypter {
         // Once we get the encrypted value we'll go ahead and base64.encode the input
         // vector and create the MAC for the encrypted value so we can then verify
         // its authenticity. Then, we'll JSON the data into the "payload" array.
-        let mac = this.hash(iv = Buffer.from(iv, 'binary').toString('base64'), value);
-        return Buffer.from(JSON.stringify({iv, value, mac}), 'utf8').toString('base64');
+        const iv = Buffer.from(rawIv, 'binary').toString('base64');
+        const mac = this.hash(iv, value);
+
+        return Buffer.from(JSON.stringify({
+            iv, 
+            value, 
+            mac,
+        }), 'utf8').toString('base64');
     }
 
     /**
@@ -130,7 +134,7 @@ class Encrypter {
         // we will then unserialize it and return it out to the caller. If we are
         // unable to decrypt this value we will throw out an exception message.
         const decipher = crypto.createDecipheriv(this.cipher, this.key, iv);
-        //decipher.setAutoPadding(false);
+
         let decryptedPayload;
 
         try {
@@ -166,7 +170,7 @@ class Encrypter {
      * @return {Buffer}
      */
     hash(iv, value) {
-        let hmac = crypto.createHmac('sha256', this.key);
+        const hmac = crypto.createHmac('sha256', this.key);
         hmac.update(iv.concat(value), 'utf8');
         return hmac.digest().toString('hex');
     }
@@ -223,7 +227,7 @@ class Encrypter {
      * @return {boolean}
      */
     validMac(payload) {
-        let bytes = crypto.randomBytes(16),
+        const bytes = crypto.randomBytes(16),
             calculated = this.calculateMac(payload, bytes),
             hmac = crypto.createHmac('sha256', bytes);
         hmac.update(payload.mac);
